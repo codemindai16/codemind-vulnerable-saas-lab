@@ -1,0 +1,243 @@
+# CodeMind AI Security Benchmark - Ground Truth Vulnerabilities
+# This file defines all deliberate vulnerabilities in the repository.
+# CodeMind AI results are measured against this ground truth.
+
+- id: CMD-SEC-001
+  title: Weak JWT Secret Key
+  owasp: A02 Cryptographic Failures
+  cwe: CWE-321
+  severity: critical
+  branch: main
+  file: backend/app/config.py
+  description: >
+    The JWT secret key is hardcoded as "weak-secret-key-123" in Settings class.
+    This allows attackers to forge arbitrary JWT tokens and impersonate any user.
+  expected_detection:
+    - hardcoded secret key in source code
+    - weak/guessable secret for JWT signing
+  expected_fix:
+    - use strong random secret from environment variable
+    - rotate secrets regularly
+    - minimum 256-bit key length
+  validation_tests:
+    - tests/security/test_jwt_secret.py
+
+- id: CMD-SEC-002
+  title: Excessive JWT Token Expiration
+  owasp: A07 Identification and Authentication Failures
+  cwe: CWE-613
+  severity: high
+  branch: main
+  file: backend/app/config.py
+  description: >
+    ACCESS_TOKEN_EXPIRE_MINUTES is set to 999999 (~2 years).
+    This violates JWT best practices and increases the window for token theft.
+  expected_detection:
+    - token expiration set to excessively long duration
+    - insufficient session expiry
+  expected_fix:
+    - set token expiry to 15-60 minutes
+    - implement refresh token rotation
+  validation_tests:
+    - tests/security/test_token_expiry.py
+
+- id: CMD-SEC-003
+  title: Missing Password Verification in Login
+  owasp: A07 Identification and Authentication Failures
+  cwe: CWE-287
+  severity: critical
+  branch: main
+  file: backend/app/routers/auth.py
+  description: >
+    The login endpoint never calls verify_password(). It only checks
+    if the user exists and is active, then immediately issues a JWT.
+    Any email address with any password will authenticate successfully.
+  expected_detection:
+    - missing password verification in authentication flow
+    - token issued without verifying credentials
+  expected_fix:
+    - call verify_password() to compare provided password with stored hash
+    - return 401 on password mismatch
+  validation_tests:
+    - tests/security/test_auth_bypass.py
+
+- id: CMD-SEC-004
+  title: API Key Exposed in User Response
+  owasp: A04 Insecure Design
+  cwe: CWE-200
+  severity: high
+  branch: main
+  file: backend/app/schemas/__init__.py
+  description: >
+    UserOut schema includes api_key field, exposing sensitive credentials
+    in API responses. Attackers with access to user lists can harvest API keys.
+  expected_detection:
+    - sensitive credential exposed in API response schema
+    - api_key returned in user profile endpoint
+  expected_fix:
+    - remove api_key from UserOut schema
+    - create separate endpoint for key management with auth
+  validation_tests:
+    - tests/security/test_api_key_exposure.py
+
+- id: CMD-SEC-005
+  title: Security Credentials in Log Output
+  owasp: A09 Security Logging and Monitoring Failures
+  cwe: CWE-532
+  severity: medium
+  branch: main
+  file: backend/app/utils/security.py
+  description: >
+    log_security_event logs sensitive data including API keys and tokens
+    to stdout. This creates credential leakage in log aggregation systems.
+  expected_detection:
+    - sensitive data (api_key, token) included in log messages
+    - credentials written to application logs
+  expected_fix:
+    - redact or mask sensitive fields before logging
+    - use structured logging with separate sensitive fields
+  validation_tests:
+    - tests/security/test_log_leakage.py
+
+- id: CMD-SEC-006
+  title: CORS Allows All Origins
+  owasp: A05 Security Misconfiguration
+  cwe: CWE-942
+  severity: medium
+  branch: main
+  file: backend/app/main.py
+  description: >
+    CORS middleware configured with allow_origins=["*"], allowing any
+    website to make cross-origin requests to the API.
+  expected_detection:
+    - permissive CORS policy with wildcard origin
+    - allow_origins set to ["*"] in production
+  expected_fix:
+    - restrict CORS to specific allowed origins
+    - remove allow_credentials when using wildcard
+  validation_tests:
+    - tests/security/test_cors.py
+
+- id: CMD-SEC-007
+  title: SQL Injection in Project Search
+  owasp: A03 Injection
+  cwe: CWE-89
+  severity: critical
+  branch: vuln/sql-injection
+  file: backend/app/services/project_repository.py
+  description: >
+    The project search endpoint uses string interpolation to build SQL queries
+    from user-supplied search terms, enabling SQL injection attacks.
+  expected_detection:
+    - unsafe string interpolation in SQL query construction
+    - user-controlled input concatenated directly into SQL statement
+  expected_fix:
+    - use parameterized queries with SQLAlchemy ORM
+    - add input validation and sanitization
+    - use query builder with bound parameters
+  validation_tests:
+    - tests/security/test_sql_injection.py
+
+- id: CMD-SEC-008
+  title: Insecure Direct Object Reference (IDOR) in User Details
+  owasp: A01 Broken Access Control
+  cwe: CWE-639
+  severity: high
+  branch: vuln/idor
+  file: backend/app/routers/users.py
+  description: >
+    The GET /users/{user_id} endpoint returns any user's details without
+    verifying the requesting user has permission to view that user.
+    No organization membership or ownership check is performed.
+  expected_detection:
+    - missing authorization check for user resource access
+    - IDOR allowing viewing other users' profiles
+  expected_fix:
+    - verify requesting user has access to the target user
+    - restrict to admin users or same-organization members
+    - implement proper ownership checks
+  validation_tests:
+    - tests/security/test_idor.py
+
+- id: CMD-SEC-009
+  title: Server-Side Request Forgery in Webhook Handler
+  owasp: A10 Server-Side Request Forgery (SSRF)
+  cwe: CWE-918
+  severity: high
+  branch: vuln/ssrf
+  file: backend/app/services/webhook_executor.py
+  description: >
+    The webhook execution service fetches user-supplied URLs without
+    validating the target, allowing SSRF attacks against internal services.
+  expected_detection:
+    - user-controlled URL is fetched server-side
+    - no validation or blocking of internal/reserved IP ranges
+  expected_fix:
+    - implement URL allowlist validation
+    - block internal IP ranges (127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+    - restrict protocols to HTTPS only
+  validation_tests:
+    - tests/security/test_ssrf.py
+
+- id: CMD-SEC-010
+  title: Path Traversal in File Upload
+  owasp: A01 Broken Access Control
+  cwe: CWE-22
+  severity: high
+  branch: vuln/path-traversal
+  file: backend/app/services/file_handler.py
+  description: >
+    The file upload endpoint uses user-supplied filenames directly in
+    filesystem operations without sanitizing path traversal sequences
+    (e.g., "../", "../../etc/passwd").
+  expected_detection:
+    - user-supplied filename used directly in file path construction
+    - no sanitization of path traversal sequences
+  expected_fix:
+    - sanitize filename to remove path separators
+    - use UUID-based filenames internally
+    - validate file type against allowlist
+    - set maximum file size limits
+    - store files outside web root
+  validation_tests:
+    - tests/security/test_path_traversal.py
+
+- id: CMD-SEC-011
+  title: Mass Assignment in Billing Update
+  owasp: A01 Broken Access Control
+  cwe: CWE-915
+  severity: medium
+  branch: vuln/mass-assignment
+  file: backend/app/routers/billing.py
+  description: >
+    The billing update endpoint accepts arbitrary fields from the request
+    body without proper schema filtering, allowing users to modify
+    protected fields like total_spent, price_per_unit.
+  expected_detection:
+    - mass assignment / unprotected field update
+    - user can modify sensitive billing fields
+  expected_fix:
+    - use strict request schema allowing only intended fields
+    - never trust user input for computed/priced fields
+  validation_tests:
+    - tests/security/test_mass_assignment.py
+
+- id: CMD-SEC-012
+  title: Unsafe Command Execution in Agent Tasks
+  owasp: A03 Injection
+  cwe: CWE-78
+  severity: critical
+  branch: vuln/command-injection
+  file: backend/app/services/agent_executor.py
+  description: >
+    Agent task execution uses user-provided payload fields in shell
+    commands without proper sanitization, enabling OS command injection.
+  expected_detection:
+    - user input passed directly to shell/OS command execution
+    - unsanitized input in subprocess calls
+  expected_fix:
+    - avoid shell=True in subprocess calls
+    - use allowlist of permitted commands
+    - validate all user-supplied parameters
+  validation_tests:
+    - tests/security/test_command_injection.py

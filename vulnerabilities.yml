@@ -241,3 +241,23 @@
     - validate all user-supplied parameters
   validation_tests:
     - tests/security/test_command_injection.py
+
+- id: CMD-SEC-013
+  title: JWT None Algorithm Bypass
+  owasp: A07 Identification and Authentication Failures
+  cwe: CWE-347
+  severity: critical
+  branch: vuln/jwt-none-algorithm
+  file: backend/app/utils/auth.py
+  description: >
+    decode_access_token uses options={"verify_signature": False}, allowing
+    JWT tokens with "alg": "none" to be accepted as valid. Attackers can
+    forge arbitrary tokens without knowing the secret key.
+  expected_detection:
+    - signature verification disabled in JWT decode
+    - options={"verify_signature": false} allows none algorithm
+  expected_fix:
+    - specify allowed algorithms with algorithms=["HS256"]
+    - never disable signature verification
+  validation_tests:
+    - tests/security/test_jwt_none.py

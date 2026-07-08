@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import AgentTaskCreate, AgentTaskOut
 from app.models import AgentTask, ProjectMember
 from app.routers.auth import get_current_user
-from app.services.agent_executor import AgentExecutor
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -51,9 +50,3 @@ def get_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
-
-@router.post("/execute")
-def execute_command(cmd: str = Query(...), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    executor = AgentExecutor()
-    result = executor.execute_command(cmd)
-    return result

@@ -101,7 +101,6 @@ class BillingBase(BaseModel):
 class BillingUpdate(BaseModel):
     plan: Optional[str] = None
     usage_units: Optional[int] = None
-    total_spent: Optional[float] = None
     is_active: Optional[bool] = None
 
 class BillingOut(BillingBase):

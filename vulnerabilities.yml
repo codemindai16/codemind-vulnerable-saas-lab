@@ -241,3 +241,23 @@
     - validate all user-supplied parameters
   validation_tests:
     - tests/security/test_command_injection.py
+
+- id: CMD-SEC-015
+  title: Missing Owner Check in Organization Operations
+  owasp: A01 Broken Access Control
+  cwe: CWE-862
+  severity: high
+  branch: vuln/business-logic
+  file: backend/app/routers/organizations.py
+  description: >
+    DELETE /organizations/{org_id} and member removal allow any
+    member to delete the org or remove other members.
+    Only the owner should have these privileges.
+  expected_detection:
+    - missing owner role verification in org operations
+    - any member can delete organization or remove members
+  expected_fix:
+    - verify current_user.id == org.owner_id before delete
+    - add role-based check for owner-only operations
+  validation_tests:
+    - tests/security/test_business_logic.py

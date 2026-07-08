@@ -4,7 +4,6 @@ from app.database import get_db
 from app.schemas import WebhookCreate, WebhookOut
 from app.models import Webhook, Project, ProjectMember
 from app.routers.auth import get_current_user
-from app.services.webhook_executor import WebhookExecutor
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -43,16 +42,3 @@ def list_webhooks(
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
     return db.query(Webhook).filter(Webhook.project_id == project_id).all()
-
-@router.post("/trigger/{webhook_id}")
-def trigger_webhook(
-    webhook_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
-    if not webhook:
-        raise HTTPException(status_code=404, detail="Webhook not found")
-    executor = WebhookExecutor()
-    result = executor.execute(webhook.url, {"event": "test", "user_id": current_user.id})
-    return result

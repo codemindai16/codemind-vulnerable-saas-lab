@@ -1,0 +1,98 @@
+name: Benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Vulnerability scenario to test'
+        required: true
+        default: 'vuln/ssrf'
+        type: choice
+        options:
+          - 'main'
+          - 'vuln/sql-injection'
+          - 'vuln/idor'
+          - 'vuln/ssrf'
+          - 'vuln/path-traversal'
+          - 'vuln/mass-assignment'
+          - 'vuln/command-injection'
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: codemind
+          POSTGRES_PASSWORD: codemind
+          POSTGRES_DB: codemind
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U codemind
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://codemind:codemind@localhost:5432/codemind
+      SECRET_KEY: weak-secret-key-123
+      UPLOAD_DIR: /tmp/uploads
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create upload dir
+        run: mkdir -p /tmp/uploads
+
+      - name: Run security tests
+        id: tests
+        run: |
+          pytest tests/security/ -v --tb=short 2>&1 | tee ../benchmark.log
+
+      - name: Parse results
+        if: always()
+        run: |
+          PASSED=$(grep -c "PASSED" ../benchmark.log || true)
+          FAILED=$(grep -c "FAILED" ../benchmark.log || true)
+          TOTAL=$((PASSED + FAILED))
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Passed | $PASSED/$TOTAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fix Valid | $([ $FAILED -eq 0 ] && echo '✅ YES' || echo '❌ NO') |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run integration tests
+        if: always()
+        run: |
+          pytest tests/test_api.py -v --tb=short 2>&1 | tee ../integration.log
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Full Test Log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -50 ../benchmark.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Check SAST baseline
+        if: always()
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -q 2>/dev/null || true

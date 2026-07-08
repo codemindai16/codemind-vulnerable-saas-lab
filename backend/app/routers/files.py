@@ -1,12 +1,14 @@
 import os
 import shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import ProjectFileOut
 from app.models import Project, ProjectFile, ProjectMember
 from app.routers.auth import get_current_user
 from app.config import settings
+from app.services.file_handler import FileHandler
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -62,3 +64,16 @@ def list_files(
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
     return db.query(ProjectFile).filter(ProjectFile.project_id == project_id).all()
+
+@router.get("/download/{file_id}")
+def download_file(
+    file_id: int,
+    db: Session = Depends(get_db),
+):
+    db_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    handler = FileHandler()
+    content = handler.read_file(db_file.filename)
+    from fastapi.responses import Response
+    return Response(content=content, media_type=db_file.mime_type or "application/octet-stream")

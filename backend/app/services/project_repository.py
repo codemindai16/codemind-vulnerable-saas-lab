@@ -8,16 +8,13 @@ class ProjectRepository:
 
     def search_projects(self, organization_id: int, search_term: str) -> list[Project]:
         query = text(
-            "SELECT * FROM projects WHERE organization_id = :org_id "
-            "AND (name ILIKE :search OR description ILIKE :search)"
+            f"SELECT * FROM projects WHERE organization_id = {organization_id} "
+            f"AND (name LIKE '%{search_term}%' OR description LIKE '%{search_term}%')"
         )
-        result = self.db.execute(
-            query,
-            {"org_id": organization_id, "search": f"%{search_term}%"},
-        )
+        result = self.db.execute(query)
         return [Project(**row._mapping) for row in result]
 
     def get_project_stats(self, project_id: int) -> dict:
-        query = text("SELECT COUNT(*) as file_count FROM project_files WHERE project_id = :pid")
-        result = self.db.execute(query, {"pid": project_id}).fetchone()
+        query = text(f"SELECT COUNT(*) as file_count FROM project_files WHERE project_id = {project_id}")
+        result = self.db.execute(query).fetchone()
         return {"file_count": result[0]} if result else {"file_count": 0}

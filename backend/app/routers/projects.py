@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import ProjectCreate, ProjectOut
 from app.models import Project, ProjectMember, OrganizationMember
 from app.routers.auth import get_current_user
-from app.services.project_repository import ProjectRepository
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -40,9 +39,3 @@ def get_project(project_id: int, db: Session = Depends(get_db), current_user=Dep
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return project
-
-@router.get("/search/{organization_id}")
-def search_projects(organization_id: int, q: str = Query(...), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    repo = ProjectRepository(db)
-    results = repo.search_projects(organization_id, q)
-    return results

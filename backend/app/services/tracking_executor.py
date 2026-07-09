@@ -1,11 +1,13 @@
 import subprocess
 from typing import Optional
 
+
 ALLOWED_COMMANDS = {
     "ls", "cat", "echo", "pwd", "whoami", "date", "uname", "df", "ps",
 }
 
-class AgentExecutor:
+
+class TrackingExecutor:
     def execute_command(self, command: str, args: Optional[list[str]] = None) -> dict:
         if command not in ALLOWED_COMMANDS:
             raise ValueError(f"Command '{command}' is not in the allowlist")

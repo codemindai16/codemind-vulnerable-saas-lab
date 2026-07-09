@@ -16,13 +16,14 @@ ALLOWED_MIME_TYPES = {
     "image/gif",
 }
 
-class FileHandler:
+
+class PostHandler:
     def __init__(self):
         self.upload_dir = Path(settings.UPLOAD_DIR)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self.max_size = settings.MAX_UPLOAD_SIZE
 
-    def save_file(self, file: UploadFile) -> str:
+    def save_media(self, file: UploadFile) -> str:
         safe_name = f"{uuid.uuid4().hex}_{Path(file.filename).name}"
         safe_path = self.upload_dir / safe_name
         safe_path = safe_path.resolve()
@@ -39,14 +40,14 @@ class FileHandler:
 
         return str(safe_path)
 
-    def read_file(self, filename: str) -> bytes:
+    def read_media(self, filename: str) -> bytes:
         safe_path = (self.upload_dir / filename).resolve()
         if not str(safe_path).startswith(str(self.upload_dir.resolve())):
             raise ValueError("Path traversal detected")
         with open(safe_path, "rb") as f:
             return f.read()
 
-    def delete_file(self, filename: str) -> bool:
+    def delete_media(self, filename: str) -> bool:
         safe_path = (self.upload_dir / filename).resolve()
         if not str(safe_path).startswith(str(self.upload_dir.resolve())):
             raise ValueError("Path traversal detected")

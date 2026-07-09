@@ -18,6 +18,7 @@ BLOCKED_NETWORKS = [
     "127.0.0.0/8",
 ]
 
+
 class WebhookExecutor:
     def __init__(self):
         self.timeout = settings.WEBHOOK_TIMEOUT

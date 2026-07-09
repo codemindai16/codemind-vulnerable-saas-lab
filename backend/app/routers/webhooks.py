@@ -1,44 +1,46 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas import WebhookCreate, WebhookOut
-from app.models import Webhook, Project, ProjectMember
+from app.schemas import SocialWebhookCreate, SocialWebhookOut
+from app.models import SocialWebhook, SocialAccount, SocialAccountMember
 from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-@router.post("/{project_id}", response_model=WebhookOut)
+
+@router.post("/{account_id}", response_model=SocialWebhookOut)
 def create_webhook(
-    project_id: int,
-    webhook_data: WebhookCreate,
+    account_id: int,
+    webhook_data: SocialWebhookCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
+    membership = db.query(SocialAccountMember).filter(
+        SocialAccountMember.account_id == account_id,
+        SocialAccountMember.user_id == current_user.id,
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    webhook = Webhook(**webhook_data.dict(), project_id=project_id)
+    account = db.query(SocialAccount).filter(SocialAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Social account not found")
+    webhook = SocialWebhook(**webhook_data.dict(), account_id=account_id)
     db.add(webhook)
     db.commit()
     db.refresh(webhook)
     return webhook
 
-@router.get("/{project_id}", response_model=list[WebhookOut])
+
+@router.get("/{account_id}", response_model=list[SocialWebhookOut])
 def list_webhooks(
-    project_id: int,
+    account_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
+    membership = db.query(SocialAccountMember).filter(
+        SocialAccountMember.account_id == account_id,
+        SocialAccountMember.user_id == current_user.id,
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
-    return db.query(Webhook).filter(Webhook.project_id == project_id).all()
+    return db.query(SocialWebhook).filter(SocialWebhook.account_id == account_id).all()

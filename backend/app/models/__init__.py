@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
 
@@ -17,8 +18,9 @@ class User(Base):
     api_key = Column(String, unique=True, index=True)
 
     organizations = relationship("OrganizationMember", back_populates="user")
-    projects = relationship("ProjectMember", back_populates="user")
-    agent_tasks = relationship("AgentTask", back_populates="owner")
+    accounts = relationship("SocialAccountMember", back_populates="user")
+    tracking_jobs = relationship("TrackingJob", back_populates="owner")
+
 
 class Organization(Base):
     __tablename__ = "organizations"
@@ -31,7 +33,8 @@ class Organization(Base):
     settings = Column(JSON, default={})
 
     members = relationship("OrganizationMember", back_populates="organization")
-    projects = relationship("Project", back_populates="organization")
+    social_accounts = relationship("SocialAccount", back_populates="organization")
+
 
 class OrganizationMember(Base):
     __tablename__ = "organization_members"
@@ -45,83 +48,97 @@ class OrganizationMember(Base):
     organization = relationship("Organization", back_populates="members")
     user = relationship("User", back_populates="organizations")
 
-class Project(Base):
-    __tablename__ = "projects"
+
+class SocialAccount(Base):
+    __tablename__ = "social_accounts"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    description = Column(Text)
+    platform = Column(String, nullable=False)
+    account_username = Column(String, nullable=False)
+    display_name = Column(String)
+    bio = Column(Text)
     organization_id = Column(Integer, ForeignKey("organizations.id"))
-    repo_url = Column(String)
-    status = Column(String, default="active")
+    is_tracking = Column(Boolean, default=True)
+    last_synced = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    organization = relationship("Organization", back_populates="projects")
-    members = relationship("ProjectMember", back_populates="project")
-    files = relationship("ProjectFile", back_populates="project")
-    webhooks = relationship("Webhook", back_populates="project")
-    billing = relationship("Billing", back_populates="project", uselist=False)
+    organization = relationship("Organization", back_populates="social_accounts")
+    members = relationship("SocialAccountMember", back_populates="account")
+    posts = relationship("TrackedPost", back_populates="account")
+    webhooks = relationship("SocialWebhook", back_populates="account")
+    billing = relationship("Subscription", back_populates="account", uselist=False)
 
-class ProjectMember(Base):
-    __tablename__ = "project_members"
+
+class SocialAccountMember(Base):
+    __tablename__ = "social_account_members"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    account_id = Column(Integer, ForeignKey("social_accounts.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
     role = Column(String, default="viewer")
     joined_at = Column(DateTime, default=datetime.utcnow)
 
-    project = relationship("Project", back_populates="members")
-    user = relationship("User", back_populates="projects")
+    account = relationship("SocialAccount", back_populates="members")
+    user = relationship("User", back_populates="accounts")
 
-class ProjectFile(Base):
-    __tablename__ = "project_files"
+
+class TrackedPost(Base):
+    __tablename__ = "tracked_posts"
 
     id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, nullable=False)
-    filepath = Column(String, nullable=False)
-    project_id = Column(Integer, ForeignKey("projects.id"))
-    uploaded_by = Column(Integer, ForeignKey("users.id"))
-    size = Column(Integer)
-    mime_type = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    post_id = Column(String, index=True)
+    content = Column(Text)
+    author_username = Column(String)
+    author_display_name = Column(String)
+    platform = Column(String, nullable=False)
+    account_id = Column(Integer, ForeignKey("social_accounts.id"))
+    posted_at = Column(DateTime)
+    fetched_at = Column(DateTime, default=datetime.utcnow)
+    like_count = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+    share_count = Column(Integer, default=0)
+    engagement_score = Column(Float, default=0.0)
+    metadata_json = Column(JSON, default={})
 
-    project = relationship("Project", back_populates="files")
+    account = relationship("SocialAccount", back_populates="posts")
 
-class Webhook(Base):
-    __tablename__ = "webhooks"
+
+class SocialWebhook(Base):
+    __tablename__ = "social_webhooks"
 
     id = Column(Integer, primary_key=True, index=True)
     url = Column(String, nullable=False)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    account_id = Column(Integer, ForeignKey("social_accounts.id"))
     events = Column(JSON, default=[])
     secret = Column(String)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    project = relationship("Project", back_populates="webhooks")
+    account = relationship("SocialAccount", back_populates="webhooks")
 
-class Billing(Base):
-    __tablename__ = "billing"
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    account_id = Column(Integer, ForeignKey("social_accounts.id"))
     plan = Column(String, default="free")
-    usage_units = Column(Integer, default=0)
-    price_per_unit = Column(Float, default=0.0)
+    tracked_posts_limit = Column(Integer, default=100)
+    price_per_month = Column(Float, default=0.0)
     total_spent = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    project = relationship("Project", back_populates="billing")
+    account = relationship("SocialAccount", back_populates="billing")
 
-class AgentTask(Base):
-    __tablename__ = "agent_tasks"
+
+class TrackingJob(Base):
+    __tablename__ = "tracking_jobs"
 
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    project_id = Column(Integer)
-    task_type = Column(String, nullable=False)
+    account_id = Column(Integer)
+    job_type = Column(String, nullable=False)
     payload = Column(JSON, default={})
     status = Column(String, default="pending")
     result = Column(JSON)
@@ -129,7 +146,8 @@ class AgentTask(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
 
-    owner = relationship("User", back_populates="agent_tasks")
+    owner = relationship("User", back_populates="tracking_jobs")
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

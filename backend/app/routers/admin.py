@@ -2,15 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas import UserOut
-from app.models import User, AgentTask, AuditLog
+from app.models import User, TrackingJob, AuditLog
 from app.routers.auth import get_current_user
+from app.schemas import TrackingJobOut
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional, Dict, Any
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
 
 def require_admin(current_user=Depends(get_current_user)):
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
+
 
 @router.get("/users", response_model=list[UserOut])
 def list_all_users(
@@ -19,24 +25,14 @@ def list_all_users(
 ):
     return db.query(User).all()
 
-@router.get("/tasks", response_model=list[AgentTaskOut])
-def list_all_tasks(
+
+@router.get("/jobs", response_model=list[TrackingJobOut])
+def list_all_jobs(
     db: Session = Depends(get_db),
     admin=Depends(require_admin),
 ):
-    return db.query(AgentTask).all()
+    return db.query(TrackingJob).all()
 
-@router.get("/audit-logs", response_model=list[AuditLogOut])
-def list_audit_logs(
-    db: Session = Depends(get_db),
-    admin=Depends(require_admin),
-):
-    return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
-
-from app.schemas import AgentTaskOut
-from app.schemas import BaseModel
-from datetime import datetime
-from typing import Optional, Dict, Any
 
 class AuditLogOut(BaseModel):
     id: int
@@ -50,3 +46,11 @@ class AuditLogOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+@router.get("/audit-logs", response_model=list[AuditLogOut])
+def list_audit_logs(
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    return db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()

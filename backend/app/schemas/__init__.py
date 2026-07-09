@@ -2,16 +2,20 @@ from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
+
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserOut(UserBase):
     id: int
@@ -23,19 +27,24 @@ class UserOut(UserBase):
     class Config:
         from_attributes = True
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+
 class TokenData(BaseModel):
     email: Optional[str] = None
+
 
 class OrganizationBase(BaseModel):
     name: str
     slug: str
 
+
 class OrganizationCreate(OrganizationBase):
     pass
+
 
 class OrganizationOut(OrganizationBase):
     id: int
@@ -46,67 +55,87 @@ class OrganizationOut(OrganizationBase):
     class Config:
         from_attributes = True
 
-class ProjectBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    repo_url: Optional[str] = None
 
-class ProjectCreate(ProjectBase):
+class SocialAccountBase(BaseModel):
+    platform: str = Field(description="twitter, instagram, linkedin, facebook, tiktok")
+    account_username: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+
+
+class SocialAccountCreate(SocialAccountBase):
     organization_id: int
 
-class ProjectOut(ProjectBase):
+
+class SocialAccountOut(SocialAccountBase):
     id: int
     organization_id: int
-    status: str
+    is_tracking: bool
+    last_synced: Optional[datetime]
     created_at: datetime
 
     class Config:
         from_attributes = True
 
-class ProjectFileBase(BaseModel):
-    filename: str
-    mime_type: Optional[str] = None
 
-class ProjectFileOut(ProjectFileBase):
+class TrackedPostBase(BaseModel):
+    post_id: Optional[str] = None
+    content: Optional[str] = None
+    author_username: Optional[str] = None
+    author_display_name: Optional[str] = None
+    platform: str
+    posted_at: Optional[datetime] = None
+    like_count: int = 0
+    comment_count: int = 0
+    share_count: int = 0
+    engagement_score: float = 0.0
+    metadata_json: Dict[str, Any] = {}
+
+
+class TrackedPostOut(TrackedPostBase):
     id: int
-    filepath: str
-    project_id: int
-    size: Optional[int]
-    created_at: datetime
+    account_id: int
+    fetched_at: datetime
 
     class Config:
         from_attributes = True
 
-class WebhookBase(BaseModel):
+
+class SocialWebhookBase(BaseModel):
     url: str
     events: List[str] = []
     secret: Optional[str] = None
 
-class WebhookCreate(WebhookBase):
+
+class SocialWebhookCreate(SocialWebhookBase):
     pass
 
-class WebhookOut(WebhookBase):
+
+class SocialWebhookOut(SocialWebhookBase):
     id: int
-    project_id: int
+    account_id: int
     is_active: bool
     created_at: datetime
 
     class Config:
         from_attributes = True
 
-class BillingBase(BaseModel):
-    plan: str = "free"
-    usage_units: int = 0
 
-class BillingUpdate(BaseModel):
+class SubscriptionBase(BaseModel):
+    plan: str = "free"
+    tracked_posts_limit: int = 100
+
+
+class SubscriptionUpdate(BaseModel):
     plan: Optional[str] = None
-    usage_units: Optional[int] = None
+    tracked_posts_limit: Optional[int] = None
     is_active: Optional[bool] = None
 
-class BillingOut(BillingBase):
+
+class SubscriptionOut(SubscriptionBase):
     id: int
-    project_id: int
-    price_per_unit: float
+    account_id: int
+    price_per_month: float
     total_spent: float
     is_active: bool
     created_at: datetime
@@ -114,15 +143,18 @@ class BillingOut(BillingBase):
     class Config:
         from_attributes = True
 
-class AgentTaskBase(BaseModel):
-    task_type: str
-    payload: Dict[str, Any] = {}
-    project_id: int
 
-class AgentTaskCreate(AgentTaskBase):
+class TrackingJobBase(BaseModel):
+    job_type: str
+    payload: Dict[str, Any] = {}
+    account_id: int
+
+
+class TrackingJobCreate(TrackingJobBase):
     pass
 
-class AgentTaskOut(AgentTaskBase):
+
+class TrackingJobOut(TrackingJobBase):
     id: int
     owner_id: int
     status: str

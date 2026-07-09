@@ -1,47 +1,49 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas import BillingOut, BillingUpdate
-from app.models import Billing, Project, ProjectMember
+from app.schemas import SubscriptionOut, SubscriptionUpdate
+from app.models import Subscription, SocialAccount, SocialAccountMember
 from app.routers.auth import get_current_user
 
-router = APIRouter(prefix="/billing", tags=["billing"])
+router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
-@router.get("/{project_id}", response_model=BillingOut)
-def get_billing(
-    project_id: int,
+
+@router.get("/{account_id}", response_model=SubscriptionOut)
+def get_subscription(
+    account_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
+    membership = db.query(SocialAccountMember).filter(
+        SocialAccountMember.account_id == account_id,
+        SocialAccountMember.user_id == current_user.id,
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
-    billing = db.query(Billing).filter(Billing.project_id == project_id).first()
-    if not billing:
-        raise HTTPException(status_code=404, detail="Billing not found")
-    return billing
+    subscription = db.query(Subscription).filter(Subscription.account_id == account_id).first()
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    return subscription
 
-@router.put("/{project_id}", response_model=BillingOut)
-def update_billing(
-    project_id: int,
-    billing_data: BillingUpdate,
+
+@router.put("/{account_id}", response_model=SubscriptionOut)
+def update_subscription(
+    account_id: int,
+    sub_data: SubscriptionUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id,
+    membership = db.query(SocialAccountMember).filter(
+        SocialAccountMember.account_id == account_id,
+        SocialAccountMember.user_id == current_user.id,
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied")
-    billing = db.query(Billing).filter(Billing.project_id == project_id).first()
-    if not billing:
-        raise HTTPException(status_code=404, detail="Billing not found")
-    for key, value in billing_data.dict(exclude_unset=True).items():
-        setattr(billing, key, value)
+    subscription = db.query(Subscription).filter(Subscription.account_id == account_id).first()
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    for key, value in sub_data.dict(exclude_unset=True).items():
+        setattr(subscription, key, value)
     db.commit()
-    db.refresh(billing)
-    return billing
+    db.refresh(subscription)
+    return subscription

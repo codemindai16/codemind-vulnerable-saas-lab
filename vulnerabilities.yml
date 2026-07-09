@@ -119,14 +119,14 @@
     - tests/security/test_cors.py
 
 - id: CMD-SEC-007
-  title: SQL Injection in Project Search
+  title: SQL Injection in Account Search
   owasp: A03 Injection
   cwe: CWE-89
   severity: critical
   branch: vuln/sql-injection
-  file: backend/app/services/project_repository.py
+  file: backend/app/services/account_repository.py
   description: >
-    The project search endpoint uses string interpolation to build SQL queries
+    The account search endpoint uses string interpolation to build SQL queries
     from user-supplied search terms, enabling SQL injection attacks.
   expected_detection:
     - unsafe string interpolation in SQL query construction
@@ -180,14 +180,14 @@
     - tests/security/test_ssrf.py
 
 - id: CMD-SEC-010
-  title: Path Traversal in File Upload
+  title: Path Traversal in Media Upload
   owasp: A01 Broken Access Control
   cwe: CWE-22
   severity: high
   branch: vuln/path-traversal
-  file: backend/app/services/file_handler.py
+  file: backend/app/services/post_handler.py
   description: >
-    The file upload endpoint uses user-supplied filenames directly in
+    The media upload endpoint uses user-supplied filenames directly in
     filesystem operations without sanitizing path traversal sequences
     (e.g., "../", "../../etc/passwd").
   expected_detection:
@@ -203,16 +203,16 @@
     - tests/security/test_path_traversal.py
 
 - id: CMD-SEC-011
-  title: Mass Assignment in Billing Update
+  title: Mass Assignment in Subscription Update
   owasp: A01 Broken Access Control
   cwe: CWE-915
   severity: medium
   branch: vuln/mass-assignment
   file: backend/app/routers/billing.py
   description: >
-    The billing update endpoint accepts arbitrary fields from the request
+    The subscription update endpoint accepts arbitrary fields from the request
     body without proper schema filtering, allowing users to modify
-    protected fields like total_spent, price_per_unit.
+    protected fields like total_spent, price_per_month.
   expected_detection:
     - mass assignment / unprotected field update
     - user can modify sensitive billing fields
@@ -223,14 +223,14 @@
     - tests/security/test_mass_assignment.py
 
 - id: CMD-SEC-012
-  title: Unsafe Command Execution in Agent Tasks
+  title: Unsafe Command Execution in Tracking Jobs
   owasp: A03 Injection
   cwe: CWE-78
   severity: critical
   branch: vuln/command-injection
-  file: backend/app/services/agent_executor.py
+  file: backend/app/services/tracking_executor.py
   description: >
-    Agent task execution uses user-provided payload fields in shell
+    Tracking job execution uses user-provided payload fields in shell
     commands without proper sanitization, enabling OS command injection.
   expected_detection:
     - user input passed directly to shell/OS command execution

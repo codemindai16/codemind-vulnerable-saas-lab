@@ -1,8 +1,8 @@
-# CodeMind AI Security Benchmark Lab
+# CodeMind SocialTracker - Security Benchmark Lab
 
 A realistic vulnerable SaaS repository for benchmarking autonomous code review, security validation, and AI-generated fixes.
 
-**Domain**: AI Agent Task Manager — users create agents, run analysis tasks, upload files, configure webhooks, and manage billing.
+**Domain**: Social Media Tracking & Analytics Platform — users connect social media accounts, track posts, monitor engagement metrics, configure webhooks, and manage subscriptions.
 
 ---
 
@@ -38,12 +38,12 @@ docker compose up -d
 | CMD-SEC-004 | API Key Exposed in User Response | A04 Insecure Design | CWE-200 | High | main |
 | CMD-SEC-005 | Security Credentials in Log Output | A09 Logging Failures | CWE-532 | Medium | main |
 | CMD-SEC-006 | CORS Allows All Origins | A05 Security Misconfiguration | CWE-942 | Medium | main |
-| CMD-SEC-007 | SQL Injection in Project Search | A03 Injection | CWE-89 | Critical | vuln/sql-injection |
+| CMD-SEC-007 | SQL Injection in Account Search | A03 Injection | CWE-89 | Critical | vuln/sql-injection |
 | CMD-SEC-008 | IDOR in User Details | A01 Broken Access Control | CWE-639 | High | vuln/idor |
 | CMD-SEC-009 | SSRF in Webhook Handler | A10 SSRF | CWE-918 | High | vuln/ssrf |
-| CMD-SEC-010 | Path Traversal in File Upload | A01 Broken Access Control | CWE-22 | High | vuln/path-traversal |
-| CMD-SEC-011 | Mass Assignment in Billing | A01 Broken Access Control | CWE-915 | Medium | vuln/mass-assignment |
-| CMD-SEC-012 | Unsafe Command Execution | A03 Injection | CWE-78 | Critical | vuln/command-injection |
+| CMD-SEC-010 | Path Traversal in Media Upload | A01 Broken Access Control | CWE-22 | High | vuln/path-traversal |
+| CMD-SEC-011 | Mass Assignment in Subscription | A01 Broken Access Control | CWE-915 | Medium | vuln/mass-assignment |
+| CMD-SEC-012 | Unsafe Command Execution in Tracking Jobs | A03 Injection | CWE-78 | Critical | vuln/command-injection |
 
 Full ground truth: [vulnerabilities.yml](vulnerabilities.yml)
 
@@ -54,12 +54,12 @@ Full ground truth: [vulnerabilities.yml](vulnerabilities.yml)
 ```
 main                         Secure baseline (6 config-level vulns)
 │
-├── vuln/sql-injection       SQL injection via string interpolation
+├── vuln/sql-injection       SQL injection in account search
 ├── vuln/idor                Missing authorization check
 ├── vuln/ssrf                No URL validation in webhook
-├── vuln/path-traversal      Unsafe filename handling
-├── vuln/mass-assignment     Protected billing fields exposed
-├── vuln/command-injection   shell=True in subprocess
+├── vuln/path-traversal      Unsafe filename in media upload
+├── vuln/mass-assignment     Protected subscription fields exposed
+├── vuln/command-injection   shell=True in tracking job executor
 │
 └── fix/*                    Expected fix for each vuln
 ```

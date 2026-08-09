@@ -1,0 +1,7 @@
+reviews:
+  auto_review: true
+security:
+  min_severity_for_pr: high
+  require_human_approval_for: []
+fixes:
+  allow_pr_creation: true

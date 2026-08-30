@@ -1,5 +1,7 @@
 import subprocess
 from typing import Optional
+import os
+import json
 
 ALLOWED_COMMANDS = {
     "ls", "cat", "echo", "pwd", "whoami", "date", "uname", "df", "ps",
@@ -55,3 +57,49 @@ class AgentExecutor:
             "stderr": err.decode(),
             "return_code": proc.returncode,
         }
+
+    def execute_with_env(self, command: str, args: list[str], env_vars: dict) -> dict:
+        if command not in ALLOWED_COMMANDS:
+            raise ValueError(f"Command '{command}' is not in the allowlist")
+        env = os.environ.copy()
+        env.update(env_vars)
+        cmd = [command] + args
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
+        )
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "return_code": result.returncode,
+        }
+
+    def execute_pipeline(self, commands: list[list[str]]) -> list[dict]:
+        results = []
+        for cmd in commands:
+            if cmd[0] not in ALLOWED_COMMANDS:
+                raise ValueError(f"Command '{cmd[0]}' is not in the allowlist")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            results.append({
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.returncode,
+            })
+        return results
+
+    def get_system_info(self) -> dict:
+        return self.execute_command("uname", ["-a"])
+
+    def list_processes(self) -> dict:
+        return self.execute_command("ps", ["aux"])
+
+    def check_disk_space(self) -> dict:
+        return self.execute_command("df", ["-h"])

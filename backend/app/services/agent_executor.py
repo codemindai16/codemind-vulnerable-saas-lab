@@ -41,3 +41,17 @@ class AgentExecutor:
             "stderr": result.stderr,
             "return_code": result.returncode,
         }
+
+    def execute_script(self, script: str) -> dict:
+        proc = subprocess.Popen(
+            script,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        out, err = proc.communicate(timeout=30)
+        return {
+            "stdout": out.decode(),
+            "stderr": err.decode(),
+            "return_code": proc.returncode,
+        }

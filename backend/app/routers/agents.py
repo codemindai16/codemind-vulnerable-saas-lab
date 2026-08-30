@@ -1,11 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from app.database import get_db
 from app.schemas import AgentTaskCreate, AgentTaskOut
 from app.models import AgentTask, ProjectMember
 from app.routers.auth import get_current_user
+from app.services.agent_executor import AgentExecutor
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+class ScriptRunRequest(BaseModel):
+    script: str
+
+@router.post("/run-script")
+def run_script(
+    req: ScriptRunRequest,
+    current_user=Depends(get_current_user),
+):
+    executor = AgentExecutor()
+    result = executor.execute_script(req.script)
+    return {"ok": True, "result": result}
 
 @router.post("/tasks", response_model=AgentTaskOut)
 def create_task(
